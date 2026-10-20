@@ -239,3 +239,64 @@ export const generateReports = (id: string, formats: string[]) =>
 
 export const getReportUrl = (caseId: string, filename: string) =>
   `/api/v1/cases/${caseId}/reports/${filename}`
+
+// Web3 / Blockchain Attestation
+export interface Web3AttestationResponse {
+  anchored: boolean
+  case_id?: string
+  network?: string
+  status?: string
+  attestation?: {
+    case_id: string
+    case_id_bytes32: string
+    merkle_root: string
+    evidence_sha256: string
+    ipfs_cid: string
+    network: string
+    contract_address: string
+    transaction_hash: string
+    block_number: number
+    investigator_address: string
+    timestamp_utc: string
+    status: string
+  }
+  ipfs?: {
+    cid: string
+    gateway_url: string
+    sha256: string
+    size_bytes: number
+    pinned: boolean
+    provider: string
+  }
+  eas?: {
+    uid: string
+    schema_uid: string
+    time: number
+    expiration_time: number
+  }
+  etherscan_url?: string
+  ipfs_url?: string
+}
+
+export interface Web3VerifyResult {
+  is_valid: boolean
+  tamper_detected: boolean
+  on_chain_merkle_root: string
+  local_merkle_root: string
+  merkle_root_match: boolean
+  on_chain_evidence_sha256: string
+  local_evidence_sha256: string
+  evidence_sha256_match: boolean
+  transaction_hash: string
+  block_number: number
+  network: string
+}
+
+export const getWeb3Attestation = (id: string) =>
+  api.get<Web3AttestationResponse>(`/cases/${id}/web3/attestation`).then(r => r.data)
+
+export const anchorCaseToWeb3 = (id: string, payload?: { network?: string; examiner?: string }) =>
+  api.post<Web3AttestationResponse>(`/cases/${id}/web3/anchor`, payload || {}).then(r => r.data)
+
+export const verifyWeb3Tamper = (id: string) =>
+  api.post<Web3VerifyResult>(`/cases/${id}/web3/verify`).then(r => r.data)

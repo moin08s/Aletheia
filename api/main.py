@@ -35,7 +35,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-cases_dir = Path(os.environ.get("WASP_CASES_DIR", r"a:\wasp\WASP\run_artifacts"))
+# Resolves dynamic cases directory fallback based on current workspace
+default_cases_dir = Path(__file__).resolve().parent.parent / "run_artifacts"
+cases_dir = Path(os.environ.get("WASP_CASES_DIR", str(default_cases_dir)))
 
 analysis_status: Dict[str, str] = {}
 
@@ -436,3 +438,143 @@ def get_report(case_id: str, filename: str):
         return JSONResponse(content=_read_json_file(report_path))
     else:
         return FileResponse(path=report_path)
+
+
+# ---------------------------------------------------------
+# Web3 / Decentralized Evidence & EVM Attestation Endpoints
+# ---------------------------------------------------------
+
+try:
+    from chronotrace.web3.ipfs import IPFSClient
+    from chronotrace.web3.attestation import EVMAttestationClient
+    from chronotrace.web3.eas import EASAttestationBuilder
+    web3_available = True
+except ImportError:
+    web3_available = False
+
+
+class Web3AnchorReq(BaseModel):
+    network: Optional[str] = "Base Sepolia (L2)"
+    examiner: Optional[str] = "Forensic Analyst"
+
+
+@app.get("/api/v1/cases/{case_id}/web3/attestation")
+def get_web3_attestation(case_id: str):
+    attestation_file = cases_dir / case_id / "derived" / "web3_attestation.json"
+    if not attestation_file.exists():
+        return {"anchored": False, "status": "NOT_ANCHORED"}
+    return _read_json_file(attestation_file)
+
+
+@app.post("/api/v1/cases/{case_id}/web3/anchor")
+def anchor_case_to_web3(case_id: str, req: Web3AnchorReq):
+    if not web3_available:
+        raise HTTPException(status_code=500, detail="Web3 module not available in chronotrace")
+
+    case_path = cases_dir / case_id
+    if not case_path.exists():
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    try:
+        case = Case.open(case_path)
+        manifest_path = case_path / "manifest.json"
+        
+        merkle_root = "0" * 64
+        evidence_sha256 = "0" * 64
+        event_count = 0
+        if manifest_path.exists():
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                man_data = json.load(f)
+                merkle_root = man_data.get("merkle_root") or man_data.get("timeline", {}).get("merkle_root", "0" * 64)
+                ev_list = man_data.get("evidence", [])
+                if isinstance(ev_list, list) and len(ev_list) > 0:
+                    evidence_sha256 = ev_list[0].get("hashes", {}).get("sha256", "0" * 64)
+                elif isinstance(ev_list, dict):
+                    evidence_sha256 = ev_list.get("sha256", "0" * 64)
+                event_count = man_data.get("timeline", {}).get("total_events", len(man_data.get("derived", [])))
+
+        # 1. Decentralized Storage (IPFS)
+        ipfs_client = IPFSClient()
+        evidence_dir = case_path / "evidence"
+        ev_files = list(evidence_dir.glob("*.*")) if evidence_dir.exists() else []
+        evidence_file = ev_files[0] if ev_files else manifest_path
+
+        pin_res = ipfs_client.pin_evidence_bundle(evidence_file)
+        ipfs_cid = pin_res["cid"]
+
+        # 2. EVM Smart Contract Attestation
+        evm_client = EVMAttestationClient(network_name=req.network or "Base Sepolia (L2)")
+        attestation = evm_client.anchor_case(
+            case_id=case_id,
+            merkle_root=merkle_root,
+            evidence_sha256=evidence_sha256,
+            ipfs_cid=ipfs_cid,
+            event_count=event_count,
+        )
+
+        # 3. EAS Off-Chain Record
+        eas_builder = EASAttestationBuilder()
+        eas_record = eas_builder.build_offchain_attestation(
+            case_id=case_id,
+            merkle_root=merkle_root,
+            evidence_sha256=evidence_sha256,
+            ipfs_cid=ipfs_cid,
+            event_count=event_count,
+            examiner=req.examiner or "Forensic Analyst",
+        )
+
+        response_payload = {
+            "anchored": True,
+            "case_id": case_id,
+            "network": req.network,
+            "attestation": attestation.to_dict(),
+            "ipfs": pin_res,
+            "eas": eas_record.to_dict(),
+            "etherscan_url": f"https://sepolia.basescan.org/tx/{attestation.transaction_hash}",
+            "ipfs_url": pin_res["gateway_url"],
+        }
+
+        derived_dir = case_path / "derived"
+        derived_dir.mkdir(parents=True, exist_ok=True)
+        with open(derived_dir / "web3_attestation.json", "w", encoding="utf-8") as f:
+            json.dump(response_payload, f, indent=2)
+
+        return response_payload
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Web3 anchoring failed: {str(e)}")
+
+
+@app.post("/api/v1/cases/{case_id}/web3/verify")
+def verify_web3_tamper(case_id: str):
+    attestation_file = cases_dir / case_id / "derived" / "web3_attestation.json"
+    if not attestation_file.exists():
+        raise HTTPException(status_code=400, detail="Case is not yet anchored on-chain")
+
+    try:
+        att_data = _read_json_file(attestation_file)
+        case_path = cases_dir / case_id
+        manifest_path = case_path / "manifest.json"
+
+        current_root = "0" * 64
+        current_sha = "0" * 64
+        if manifest_path.exists():
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                man_data = json.load(f)
+                current_root = man_data.get("merkle_root") or man_data.get("timeline", {}).get("merkle_root", "0" * 64)
+                ev_list = man_data.get("evidence", [])
+                if isinstance(ev_list, list) and len(ev_list) > 0:
+                    current_sha = ev_list[0].get("hashes", {}).get("sha256", "0" * 64)
+                elif isinstance(ev_list, dict):
+                    current_sha = ev_list.get("sha256", "0" * 64)
+
+        evm_client = EVMAttestationClient()
+        from chronotrace.web3 import OnChainAttestation
+        att_obj = OnChainAttestation(**att_data["attestation"])
+        verification = evm_client.verify_on_chain(
+            attestation=att_obj,
+            current_merkle_root=current_root,
+            current_evidence_sha256=current_sha,
+        )
+        return verification
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Web3 tamper verification failed: {str(e)}")

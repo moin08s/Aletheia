@@ -1,3 +1,4 @@
+import { Web3AttestationPanel } from '../components/Web3AttestationPanel'
 import { useState } from 'react'
 import { useActiveCase } from '../hooks/useActiveCase'
 import { useQuery } from '../hooks/useQuery'
@@ -187,6 +188,8 @@ export function EvidencePage() {
           </div>
         </AsyncState>
       </div>
+
+      {activeCaseId && <Web3AttestationPanel caseId={activeCaseId} />}
     </div>
   )
 }
