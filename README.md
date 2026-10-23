@@ -34,7 +34,9 @@ Aletheia solves this by bridging **operating system digital forensics** with **E
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ System Architecture & Cryptographic Flow Map
+
+> 👉 **Deep-Dive Technical Flow Guide & RFC 6962 Sequence Diagrams**: [docs/system_flow_architecture.md](docs/system_flow_architecture.md)
 
 ```mermaid
 flowchart TD
