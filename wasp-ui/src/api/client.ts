@@ -301,3 +301,50 @@ export const anchorCaseToWeb3 = (id: string, payload?: { network?: string; exami
 
 export const verifyWeb3Tamper = (id: string) =>
   api.post<Web3VerifyResult>(`/cases/${id}/web3/verify`).then(r => r.data)
+
+
+// User Intent & Provenance Engine
+export interface UserIntentResponse {
+  tx_hash: string
+  tx_timestamp_utc: string
+  is_authorized_user: boolean
+  human_provenance_score: number
+  verdict: string
+  corroborating_signals: string[]
+  risk_factors: string[]
+}
+
+export const getUserIntent = (id: string, txHash?: string, txTime?: string) =>
+  api.get<UserIntentResponse>(`/cases/${id}/intent`, { params: { tx_hash: txHash, tx_time: txTime } }).then(r => r.data)
+
+// ZK Groth16 Proof Engine
+export interface ZKProofResponse {
+  scheme: string
+  curve: string
+  case_id: string
+  verified: boolean
+  pi_a: string[]
+  pi_b: string[][]
+  pi_c: string[]
+  public_signals: string[]
+  metadata: {
+    target_event_id: string
+    selective_disclosure: string
+    verification_contract: string
+  }
+}
+
+export const generateZkProof = (id: string, payload: { event_id?: string; timestamp_utc?: string; hide_pii?: boolean }) =>
+  api.post<ZKProofResponse>(`/cases/${id}/zk/prove`, payload).then(r => r.data)
+
+// Evidence Ingestion / Upload
+export const uploadEvidence = (id: string, file: File, notes?: string) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (notes) formData.append('notes', notes)
+  return api.post<{ status: string; evidence_id: string; filename: string; acquisition: any }>(
+    `/cases/${id}/evidence/upload`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  ).then(r => r.data)
+}

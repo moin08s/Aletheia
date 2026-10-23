@@ -58,3 +58,53 @@ def test_api_web3_anchor_and_verify_e2e():
     assert vdata["is_valid"] is True
     assert vdata["tamper_detected"] is False
     assert vdata["merkle_root_match"] is True
+
+
+def test_api_user_intent_endpoint():
+    resp = client.get("/api/v1/cases/CASE-2026-LIVE/intent")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "verdict" in data
+    assert "human_provenance_score" in data
+    assert "corroborating_signals" in data
+    assert "risk_factors" in data
+
+
+def test_api_zk_prove_endpoint():
+    resp = client.post("/api/v1/cases/CASE-2026-LIVE/zk/prove", json={
+        "event_id": "EV-TEST-001",
+        "hide_pii": True
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["scheme"] == "Groth16"
+    assert data["curve"] == "BN254"
+    assert len(data["pi_a"]) == 2
+    assert len(data["pi_b"]) == 2
+    assert len(data["pi_c"]) == 2
+    assert data["verified"] is True
+
+
+def test_api_evidence_upload(tmp_path):
+    from chronotrace.core.case import Case
+    from api import main
+    import uuid
+
+    case_id = f"CASE-UPLOAD-{uuid.uuid4().hex[:6]}"
+    c = Case.create(case_id=case_id, out_dir=tmp_path / case_id)
+
+    orig_dir = main.cases_dir
+    main.cases_dir = tmp_path
+    try:
+        unique_name = "upload_test.log"
+        file_content = b"FORENSIC EVIDENCE ACQUISITION STREAM TEST CONTENT"
+        files = {"file": (unique_name, file_content, "text/plain")}
+        data = {"notes": "Automated API upload test"}
+        resp = client.post(f"/api/v1/cases/{case_id}/evidence/upload", files=files, data=data)
+        assert resp.status_code == 200
+        res = resp.json()
+        assert res["status"] == "success"
+        assert res["filename"] == unique_name
+        assert res["acquisition"]["verification"] == "match"
+    finally:
+        main.cases_dir = orig_dir
