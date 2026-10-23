@@ -48,6 +48,40 @@ class Hasher:
         result = {algo: h.hexdigest() for algo, h in hashers.items()}
         return result, total_bytes
 
+    def stream_copy_and_hash(
+        self,
+        src_path: Union[str, Path],
+        dst_path: Union[str, Path],
+        buffer_size: int = DEFAULT_BUFFER_SIZE,
+    ) -> Tuple[Dict[str, str], int]:
+        """
+        Adversarial Defense: Atomically stream from a single source file descriptor
+        directly into destination while calculating multi-hashes on the identical stream.
+        Eliminates the TOCTOU gap between reading/hashing and copying.
+        """
+        src = Path(src_path)
+        dst = Path(dst_path)
+        if not src.exists():
+            raise FileNotFoundError(f"Source evidence file not found: {src_path}")
+
+        hashers = {algo: hashlib.new(algo) for algo in self.algorithms}
+        total_bytes = 0
+
+        with open(src, "rb") as f_src, open(dst, "wb") as f_dst:
+            while True:
+                chunk = f_src.read(buffer_size)
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                for h in hashers.values():
+                    h.update(chunk)
+                f_dst.write(chunk)
+            f_dst.flush()
+
+        result = {algo: h.hexdigest() for algo, h in hashers.items()}
+        return result, total_bytes
+
+
     @staticmethod
     def sha256_bytes(data: bytes) -> str:
         """Calculate single SHA-256 digest for in-memory bytes."""

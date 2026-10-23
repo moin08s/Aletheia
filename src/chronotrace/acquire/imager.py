@@ -39,9 +39,7 @@ class Imager:
         hasher = Hasher(extra_algorithms=self.case.config.acquire.hash_extra)
 
         # 1. Stream copy while hashing source
-        src_hashes, size_bytes = hasher.hash_file(src)
-
-        shutil.copy2(src, dst)
+        src_hashes, size_bytes = hasher.stream_copy_and_hash(src, dst)
 
         # 2. Read-back verification pass
         dst_hashes, dst_size = hasher.hash_file(dst)

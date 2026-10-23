@@ -3,9 +3,9 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests Passing](https://img.shields.io/badge/tests-56%20passed-brightgreen.svg)]()
-[![Adversarial Defense](https://img.shields.io/badge/Adversarial%20Defense-20%2F20%20Attacks%20Defended-red.svg)](docs/adversarial_defense_matrix.md)
-[![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)-cyan.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-60%20passed-brightgreen.svg)]()
+[![Adversarial Defense](https://img.shields.io/badge/Adversarial%20Defense-20%20Attack%20Classes%20Evaluated-blue.svg)](docs/adversarial_defense_matrix.md)
+[![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)%20Support-cyan.svg)]()
 [![Ethereum L2](https://img.shields.io/badge/Base%20Sepolia-L2%20Anchored-blue.svg)](https://sepolia.basescan.org/address/0x742d35Cc6634C0532925a3b844Bc454e4438f44e)
 [![EAS Attestation](https://img.shields.io/badge/EAS-Attestation%20Verified-purple.svg)](https://base-sepolia.easscan.org)
 [![Live Web Console Demo](https://img.shields.io/badge/Live%20Demo-Aletheia%20Console-blueviolet?style=for-the-badge&logo=googlechrome)](https://moin08s.github.io/Aletheia/)
@@ -26,7 +26,7 @@ Over $2 Billion is lost annually to smart contract hacks and cyber exploits. Whe
 
 Aletheia solves this by bridging **operating system digital forensics** with **Ethereum Layer 2 rollups, decentralized storage, and EAS attestations**:
 1. **Kernel-Level Write Quarantine**: Revokes OS write permissions (`stat.S_IREAD`) upon ingestion, physically barring evidence alteration.
-2. **Deterministic Forensic Engine (Zero-AI / Zero-LLM)**: Adheres strictly to the legal **Daubert Standard** and **Federal Rule of Evidence 902(14)** without probabilistic hallucinations. Employs non-parametric **Median Absolute Deviation (MAD)** burst statistics, AST-based **Sigma rules** mapped to MITRE ATT&CK, and **Process Lineage DAGs**.
+2. **Deterministic Forensic Engine (Zero-AI / Zero-LLM)**: Designed to support legal authentication under the **Daubert Standard** and **Federal Rule of Evidence 902(14)** without probabilistic hallucinations. Employs non-parametric **Median Absolute Deviation (MAD)** burst statistics, AST-based **Sigma rules** mapped to MITRE ATT&CK, and **Process Lineage DAGs**.
 3. **RFC 6962 Domain-Separated Merkle Trees**: Computes collision-resistant Merkle roots (`0x00` leaf / `0x01` branch prefixes) over all timeline events.
 4. **Decentralized Storage & On-Chain Case Registry**: Archives encrypted evidence bundles on **IPFS/Filecoin** (`bafy...` CIDs) and anchors roots directly to the **`ChronoTraceRegistry.sol`** EVM smart contract on **Base Sepolia**.
 5. **Ethereum Attestation Service (EAS)**: Mints verifiable, signed expert witness declarations viewable on **EASScan**.
@@ -63,7 +63,7 @@ flowchart TD
 
     subgraph InterfaceLayer ["5. Investigation & Court Admissibility"]
         BaseL2 & IPFS & EAS --> UI["Aletheia React 19 Console (Incident Replay + ZK Proof)"]
-        BaseL2 & IPFS & EAS --> Report["Daubert / FRE 902(14) Certified Legal Report"]
+        BaseL2 & IPFS & EAS --> Report["Daubert / FRE 902(14) Authentication-Ready Legal Report"]
     end
 ```
 
@@ -137,7 +137,7 @@ Aletheia is hardened against **20 advanced adversarial and insider evasion vecto
 - **Group C (Trust Model Bypass)**: Investigator private key theft (Multi-sig Security Council on-chain revocation), off-chain root computation spoofing (2-phase ingestion commitment), L2 sequencer centralization/censorship, smart contract vulnerabilities, and rogue examiner tampering.
 
 👉 **Read the complete mathematical proofs and mitigation matrix**: [docs/adversarial_defense_matrix.md](docs/adversarial_defense_matrix.md)  
-👉 **Automated red-team adversarial tests**: [`tests/test_adversarial_defenses.py`](tests/test_adversarial_defenses.py) (All 5/5 Passing)
+👉 **Automated red-team adversarial tests**: [`tests/test_adversarial_defenses.py`](tests/test_adversarial_defenses.py) (All 9/9 Passing)
 
 ## 🚀 Quick Start Guide
 
@@ -148,14 +148,15 @@ Aletheia is hardened against **20 advanced adversarial and insider evasion vecto
 ### 2. Installation
 ```powershell
 # Clone the repository
-git clone https://github.com/moin08s/Aletheia.git
+# Canonical branch: main
+git clone -b main https://github.com/moin08s/Aletheia.git
 cd Aletheia
 
 # Install Python forensic dependencies
 python -m pip install -r requirements.txt
 ```
 
-### 3. Run the Automated Test Suite (51/51 Passing - Including Invariants & Parser Fuzzing)
+### 3. Run the Automated Test Suite (60/60 Passing - 100% Green: Invariants, Adversarial & Parser Fuzzing)
 ```powershell
 python -m pytest
 ```

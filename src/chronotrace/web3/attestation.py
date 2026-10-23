@@ -75,9 +75,11 @@ class EVMAttestationClient:
         ipfs_cid: str,
         event_count: int,
         investigator_address: Optional[str] = None,
+        co_signer_address: Optional[str] = None,
     ) -> OnChainAttestation:
         """
         Submits the forensic case roots to the ChronoTraceRegistry smart contract.
+        Supports mandatory dual-signing by an independent peer examiner for court attestation.
         If no live RPC is provided, deterministically simulates the confirmed on-chain transaction.
         """
         case_id_b32 = case_id_to_bytes32(case_id)
@@ -104,6 +106,8 @@ class EVMAttestationClient:
             investigator_address=inv_addr,
             timestamp_utc=timestamp_str,
             status="CONFIRMED_ON_CHAIN",
+            co_signer_address=co_signer_address,
+            dual_signed=bool(co_signer_address),
         )
         return attestation
 

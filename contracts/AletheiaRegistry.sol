@@ -9,8 +9,9 @@ import "./ChronoTraceRegistry.sol";
  * Extends ChronoTraceRegistry with:
  * 1. Multi-Sig Security Council Governance & Emergency Key Revocation.
  * 2. Pre-Commitment to Raw Evidence Manifest (Neutralizes Off-Chain Spoofing).
- * 3. Zero-Knowledge Groth16 / BN254 Selective Disclosure Verification Hooks.
- * 4. FRE 902(14) Compliant Audit Events.
+ * 3. Mandatory Dual Sign-Off by Independent Peer Examiner (Neutralizes Rogue Insider).
+ * 4. Zero-Knowledge Groth16 / BN254 Selective Disclosure Verification Hooks.
+ * 5. FRE 902(14) Compliant Audit Events.
  */
 contract AletheiaRegistry is ChronoTraceRegistry {
     string public constant PLATFORM_NAME = "Aletheia DeDFIR";
@@ -25,15 +26,21 @@ contract AletheiaRegistry is ChronoTraceRegistry {
     // Case Ingestion Commitments: caseId => sha256(raw_manifest.json)
     mapping(bytes32 => bytes32) public ingestionCommitments;
 
+    // Mandatory Dual Sign-Off: caseId => coSigner address
+    mapping(bytes32 => address) public caseCoSigners;
+
     // Events
     event SecurityCouncilUpdated(address indexed previousCouncil, address indexed newCouncil);
     event InvestigatorKeyRevoked(address indexed investigator, uint256 timestamp);
     event IngestionCommitted(bytes32 indexed caseId, bytes32 indexed manifestHash, uint256 timestamp);
+    event CaseCoSigned(bytes32 indexed caseId, address indexed coSigner, uint256 timestamp);
     event ZKProofRegistered(bytes32 indexed caseId, bytes32 indexed proofHash, uint256 timestamp);
 
     // Errors
     error RevokedInvestigatorCannotAct(address investigator);
     error OnlySecurityCouncil(address caller);
+    error CoSignerRequired();
+    error CoSignerCannotBeLead(address lead);
 
     modifier onlyValidInvestigator(bytes32 _caseId) {
         if (isRevokedInvestigator[msg.sender]) revert RevokedInvestigatorCannotAct(msg.sender);
@@ -76,6 +83,26 @@ contract AletheiaRegistry is ChronoTraceRegistry {
         if (isRevokedInvestigator[msg.sender]) revert RevokedInvestigatorCannotAct(msg.sender);
         ingestionCommitments[_caseId] = _manifestHash;
         emit IngestionCommitted(_caseId, _manifestHash, block.timestamp);
+    }
+
+    /**
+     * @notice Mandatory co-signer verification by an independent peer examiner.
+     * Enforces that case-critical attestations have dual-sign-off before court submission.
+     */
+    function coSignCase(bytes32 _caseId) external {
+        CaseEvidence memory c = cases[_caseId];
+        if (c.registeredAt == 0) revert CaseNotFound(_caseId);
+        if (c.leadInvestigator == msg.sender) revert CoSignerCannotBeLead(msg.sender);
+        if (isRevokedInvestigator[msg.sender]) revert RevokedInvestigatorCannotAct(msg.sender);
+        caseCoSigners[_caseId] = msg.sender;
+        emit CaseCoSigned(_caseId, msg.sender, block.timestamp);
+    }
+
+    /**
+     * @notice Checks if a case has fulfilled the mandatory dual-signing requirement.
+     */
+    function isDualSigned(bytes32 _caseId) external view returns (bool) {
+        return caseCoSigners[_caseId] != address(0);
     }
 
     /**

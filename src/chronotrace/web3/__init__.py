@@ -25,6 +25,8 @@ class OnChainAttestation:
     investigator_address: str
     timestamp_utc: str
     status: str
+    co_signer_address: Optional[str] = None
+    dual_signed: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

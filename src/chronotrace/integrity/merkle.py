@@ -66,3 +66,17 @@ class MerkleTree:
             current_layer = next_layer
 
         return current_layer[0].hex()
+
+
+def compute_root(leaf_hashes: Sequence[str]) -> str:
+    """Convenience top-level wrapper around MerkleTree.compute_root."""
+    return MerkleTree.compute_root(leaf_hashes)
+
+
+def canonical_serialize(obj: Any) -> bytes:
+    """Convenience top-level wrapper around MerkleTree.canonical_serialize."""
+    return MerkleTree.canonical_serialize(obj)
+
+
+__all__ = ["MerkleTree", "compute_root", "canonical_serialize"]
+

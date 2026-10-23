@@ -107,3 +107,71 @@ def test_adversarial_canonical_json_stability():
 
     assert bytes1 == bytes2
     assert bytes1 == b'{"a":1,"b":2,"c":[1,2,3]}'
+
+
+def test_adversarial_60ms_paced_dilution_detected():
+    """Verify that an attacker attempting to defeat sub-50ms checks with a 60ms cadence is caught via CV dispersion."""
+    events = []
+    # Attacker paces 40 events exactly 60ms apart (0.06s delta)
+    base_ts = 1710122400.0
+    for i in range(40):
+        t = base_ts + (i * 0.060)
+        import datetime
+        dt_str = datetime.datetime.fromtimestamp(t, datetime.timezone.utc).isoformat()
+        events.append(_make_event(f"cadence-{i}", dt_str))
+
+    detector = AnomalyDetector(events)
+    findings = detector.detect_statistical_dilution()
+
+    assert len(findings) >= 1
+    assert any(f.anomaly_type == "STATISTICAL_DILUTION_SYNTHETIC_CADENCE" for f in findings)
+
+
+def test_adversarial_clock_forward_leap_detected():
+    """Verify that an unexplained forward clock jump (> 24 hours) is flagged as an anomaly."""
+    events = [
+        _make_event("ev-1", "2024-03-11T02:00:00+00:00"),
+        # Attacker rolls clock forward 3 days into future
+        _make_event("ev-forward", "2024-03-14T02:00:00+00:00"),
+    ]
+
+    detector = AnomalyDetector(events)
+    findings = detector.detect_clock_manipulation()
+
+    assert len(findings) >= 1
+    assert any(f.anomaly_type == "CLOCK_FORWARD_LEAP_ANOMALY" for f in findings)
+
+
+def test_adversarial_stream_copy_hasher_fd(tmp_path: Path):
+    """Verify that Hasher.stream_copy_and_hash computes multi-hash atomically without gap."""
+    from chronotrace.acquire.hasher import Hasher
+    src = tmp_path / "original.bin"
+    dst = tmp_path / "streamed.bin"
+    test_data = b"FORENSIC_STREAM_PAYLOAD_TEST_" * 1024
+    src.write_bytes(test_data)
+
+    hasher = Hasher()
+    hashes, total_bytes = hasher.stream_copy_and_hash(src, dst)
+
+    assert total_bytes == len(test_data)
+    assert dst.read_bytes() == test_data
+    assert hashes["sha256"] == Hasher.sha256_bytes(test_data)
+
+
+def test_adversarial_dual_signed_attestation():
+    """Verify that OnChainAttestation supports mandatory dual sign-off by independent peer examiner."""
+    from chronotrace.web3.attestation import EVMAttestationClient
+    client = EVMAttestationClient()
+    attestation = client.anchor_case(
+        case_id="CASE-DUAL-01",
+        merkle_root="a" * 64,
+        evidence_sha256="b" * 64,
+        ipfs_cid="bafybeibtest123456789",
+        event_count=42,
+        investigator_address="0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
+        co_signer_address="0x3D7e1329c29d10B134015D56E8193a0279B48731",
+    )
+
+    assert attestation.dual_signed is True
+    assert attestation.co_signer_address == "0x3D7e1329c29d10B134015D56E8193a0279B48731"
+

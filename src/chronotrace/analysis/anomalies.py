@@ -293,7 +293,7 @@ class AnomalyDetector:
         Flags when an attacker injects artificial uniform noise to inflate the
         Median Absolute Deviation (MAD), thereby blinding standard Z-score outlier detection.
         """
-        if len(self.events) < 50:
+        if len(self.events) < 30:
             return []
 
         timestamps = []
@@ -302,7 +302,7 @@ class AnomalyDetector:
             if dt:
                 timestamps.append(dt.timestamp())
 
-        if len(timestamps) < 50:
+        if len(timestamps) < 30:
             return []
 
         deltas = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
@@ -313,9 +313,10 @@ class AnomalyDetector:
         zero_delta_count = sum(1 for d in positive_deltas if d < 0.05)
         zero_delta_ratio = zero_delta_count / len(positive_deltas)
 
+        findings = []
         # Flag if sub-50ms inter-arrival times constitute > 40% of sequential events
         if zero_delta_ratio > 0.40 and len(self.events) >= 50:
-            return [
+            findings.append(
                 AnomalyFinding(
                     anomaly_id="ANOM-DILUTION-001",
                     anomaly_type="STATISTICAL_DILUTION_ATTACK",
@@ -334,8 +335,37 @@ class AnomalyDetector:
                     affected_users=list({e.user for e in self.events if e.user}),
                     sample_events=[e.event_id for e in self.events[:5]],
                 )
-            ]
-        return []
+            )
+
+        # Enhanced Defense against paced injection (e.g. 60ms or 100ms): Coefficient of Variation (CV) dispersion test
+        mean_delta = sum(positive_deltas) / len(positive_deltas)
+        if mean_delta < 2.0 and len(positive_deltas) >= 30:
+            variance = sum((d - mean_delta) ** 2 for d in positive_deltas) / len(positive_deltas)
+            std_delta = math.sqrt(variance)
+            cv = std_delta / mean_delta if mean_delta > 0 else 0
+            if cv < 0.20 and mean_delta > 0.01:
+                findings.append(
+                    AnomalyFinding(
+                        anomaly_id="ANOM-DILUTION-CADENCE",
+                        anomaly_type="STATISTICAL_DILUTION_SYNTHETIC_CADENCE",
+                        severity="CRITICAL",
+                        title="Synthetic Cadence / Paced Log Dilution Detected",
+                        description=(
+                            f"Detected unnaturally uniform event cadence (CV={cv:.2f} < 0.20, mean delta={mean_delta*1000:.1f}ms). "
+                            "Normal user and OS activity exhibits high stochastic dispersion (CV >= 0.8). "
+                            "This narrow-dispersion pattern indicates automated programmatic event injection designed to dilute statistical baselines."
+                        ),
+                        window_start_utc=self.events[0].timestamp_utc or "",
+                        window_end_utc=self.events[-1].timestamp_utc or "",
+                        metric_value=cv,
+                        baseline_value=1.0,
+                        z_score=8.5,
+                        affected_users=list({e.user for e in self.events if e.user}),
+                        sample_events=[e.event_id for e in self.events[:5]],
+                    )
+                )
+
+        return findings
 
     def detect_clock_manipulation(self) -> List[AnomalyFinding]:
         """
@@ -369,6 +399,27 @@ class AnomalyDetector:
                             metric_value=prev_ts - ts,
                             baseline_value=0.0,
                             z_score=10.0,
+                            affected_users=[ev.user] if ev.user else [],
+                            sample_events=[ev.event_id],
+                        )
+                    )
+                    break
+                elif (ts - prev_ts) > 86400.0:
+                    findings.append(
+                        AnomalyFinding(
+                            anomaly_id=f"ANOM-CLOCK-FORWARD-{ev.event_id}",
+                            anomaly_type="CLOCK_FORWARD_LEAP_ANOMALY",
+                            severity="HIGH",
+                            title="Unexplained Forward Clock Leap Detected",
+                            description=(
+                                f"Host '{host}' timestamp jumped forward by {(ts - prev_ts)/3600.0:.1f} hours without intervening reboot. "
+                                "Indicates potential fast-forward timestomp evasion or hypervisor clock desynchronization."
+                            ),
+                            window_start_utc=ev.timestamp_utc or "",
+                            window_end_utc=ev.timestamp_utc or "",
+                            metric_value=(ts - prev_ts) / 3600.0,
+                            baseline_value=0.0,
+                            z_score=7.5,
                             affected_users=[ev.user] if ev.user else [],
                             sample_events=[ev.event_id],
                         )
