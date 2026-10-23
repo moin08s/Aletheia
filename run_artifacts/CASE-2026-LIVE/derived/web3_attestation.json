@@ -13,7 +13,7 @@
     "transaction_hash": "0xdfaa2e5364545b584844600154a2384eaf64ad7174fe65c25ed1b0206cb7e0bf",
     "block_number": 18548094,
     "investigator_address": "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
-    "timestamp_utc": "2026-10-23T14:05:20.641028+00:00",
+    "timestamp_utc": "2026-10-23T16:37:18.218629+00:00",
     "status": "CONFIRMED_ON_CHAIN"
   },
   "ipfs": {
@@ -27,8 +27,8 @@
   "eas": {
     "schema_uid": "0xa4ffd1206b58a6ab6e435549eb53fc79074d23f63df92564f9ee9e11ed27d66d",
     "recipient": "0x0000000000000000000000000000000000000000",
-    "time": 1792764320,
-    "expiration_time": 1824300320,
+    "time": 1792773438,
+    "expiration_time": 1824309438,
     "revocation_time": 0,
     "ref_uid": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "data": {
@@ -39,10 +39,10 @@
       "eventCount": 9,
       "examiner": "Lead Forensic Examiner"
     },
-    "uid": "0x7c65904a5a0697f8c19075d87da71c3fa0b80f4cadaec18b74d36f2846d1d8e7",
+    "uid": "0x393c5486d9fa6121b48753eb74264bb93b4c2f27c7d499672130a19f85a1fde3",
     "version": 1
   },
   "etherscan_url": "https://sepolia.basescan.org/tx/0xdfaa2e5364545b584844600154a2384eaf64ad7174fe65c25ed1b0206cb7e0bf",
-  "easscan_url": "https://base-sepolia.easscan.org/attestation/view/0x7c65904a5a0697f8c19075d87da71c3fa0b80f4cadaec18b74d36f2846d1d8e7",
+  "easscan_url": "https://base-sepolia.easscan.org/attestation/view/0x393c5486d9fa6121b48753eb74264bb93b4c2f27c7d499672130a19f85a1fde3",
   "ipfs_url": "https://ipfs.io/ipfs/bafybeibb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f"
 }
