@@ -531,6 +531,7 @@ def anchor_case_to_web3(case_id: str, req: Web3AnchorReq):
             "ipfs": pin_res,
             "eas": eas_record.to_dict(),
             "etherscan_url": f"https://sepolia.basescan.org/tx/{attestation.transaction_hash}",
+            "easscan_url": f"https://base-sepolia.easscan.org/attestation/view/{eas_record.uid}",
             "ipfs_url": pin_res["gateway_url"],
         }
 

@@ -275,6 +275,7 @@ export interface Web3AttestationResponse {
     expiration_time: number
   }
   etherscan_url?: string
+  easscan_url?: string
   ipfs_url?: string
 }
 

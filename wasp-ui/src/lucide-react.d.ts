@@ -8,6 +8,8 @@ declare module 'lucide-react' {
   export type Icon = React.FC<LucideProps>;
   export const Shield: Icon;
   export const Play: Icon;
+  export const Pause: Icon;
+  export const RotateCcw: Icon;
   export const Loader: Icon;
   export const CheckCircle: Icon;
   export const Database: Icon;
@@ -33,6 +35,7 @@ declare module 'lucide-react' {
   export const ArrowRight: Icon;
   export const Filter: Icon;
   export const Eye: Icon;
+  export const EyeOff: Icon;
   export const HardDrive: Icon;
   export const Cpu: Icon;
   export const Layers: Icon;
