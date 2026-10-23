@@ -1,0 +1,48 @@
+{
+  "anchored": true,
+  "case_id": "CASE-2026-LIVE",
+  "network": "Base Sepolia (L2)",
+  "attestation": {
+    "case_id": "CASE-2026-LIVE",
+    "case_id_bytes32": "0x966c27cea6d29ebf2529f8429cc885b6d91420d80c62c7404c493d24cdc9a740",
+    "merkle_root": "0x111699e3aa45304cf56ce5aeba74e1edf729110504669c4784f4071acd777f24",
+    "evidence_sha256": "0xb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f76149038b6171cd664e095e4",
+    "ipfs_cid": "bafybeibb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f",
+    "network": "Base Sepolia (L2)",
+    "contract_address": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "transaction_hash": "0xdfaa2e5364545b584844600154a2384eaf64ad7174fe65c25ed1b0206cb7e0bf",
+    "block_number": 18548094,
+    "investigator_address": "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
+    "timestamp_utc": "2026-10-23T13:37:27.421618+00:00",
+    "status": "CONFIRMED_ON_CHAIN"
+  },
+  "ipfs": {
+    "cid": "bafybeibb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f",
+    "gateway_url": "https://ipfs.io/ipfs/bafybeibb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f",
+    "sha256": "b544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f76149038b6171cd664e095e4",
+    "size_bytes": 283,
+    "pinned": true,
+    "provider": "Local-IPFS-Simulator"
+  },
+  "eas": {
+    "schema_uid": "0xa4ffd1206b58a6ab6e435549eb53fc79074d23f63df92564f9ee9e11ed27d66d",
+    "recipient": "0x0000000000000000000000000000000000000000",
+    "time": 1792762647,
+    "expiration_time": 1824298647,
+    "revocation_time": 0,
+    "ref_uid": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "data": {
+      "merkleRoot": "0x111699e3aa45304cf56ce5aeba74e1edf729110504669c4784f4071acd777f24",
+      "evidenceSha256": "0xb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f76149038b6171cd664e095e4",
+      "caseId": "CASE-2026-LIVE",
+      "ipfsCid": "bafybeibb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f",
+      "eventCount": 9,
+      "examiner": "Lead Forensic Examiner"
+    },
+    "uid": "0xa964bb49fc94530711ac2c161db22afd15f361bb32d59d0bf6c30f75d3640077",
+    "version": 1
+  },
+  "etherscan_url": "https://sepolia.basescan.org/tx/0xdfaa2e5364545b584844600154a2384eaf64ad7174fe65c25ed1b0206cb7e0bf",
+  "easscan_url": "https://base-sepolia.easscan.org/attestation/view/0xa964bb49fc94530711ac2c161db22afd15f361bb32d59d0bf6c30f75d3640077",
+  "ipfs_url": "https://ipfs.io/ipfs/bafybeibb544dfd8cc0d4521f4ba801cd4b9215ef76b6a5f"
+}
