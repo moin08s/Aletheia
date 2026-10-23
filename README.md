@@ -3,7 +3,8 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests Passing](https://img.shields.io/badge/tests-51%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-56%20passed-brightgreen.svg)]()
+[![Adversarial Defense](https://img.shields.io/badge/Adversarial%20Defense-20%2F20%20Attacks%20Defended-red.svg)](docs/adversarial_defense_matrix.md)
 [![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)-cyan.svg)]()
 [![Ethereum L2](https://img.shields.io/badge/Base%20Sepolia-L2%20Anchored-blue.svg)](https://sepolia.basescan.org/address/0x742d35Cc6634C0532925a3b844Bc454e4438f44e)
 [![EAS Attestation](https://img.shields.io/badge/EAS-Attestation%20Verified-purple.svg)](https://base-sepolia.easscan.org)
@@ -124,6 +125,19 @@ Aletheia's test suites and live demo cases are backed by authentic forensic corp
    - Synthetic ground truth harnesses (`tests/test_intent.py`, `tests/test_corroborator.py`, `tests/test_e2e_case.py`) providing verifiable test cases for sub-second timestomping conflicts and Web3 wallet drain attempts.
 
 ---
+
+
+---
+
+## 🛡️ Comprehensive Adversarial Defense Matrix (20 Red-Team Attack Classes)
+
+Aletheia is hardened against **20 advanced adversarial and insider evasion vectors** spanning 3 domains:
+- **Group A (Detection Bypass)**: Statistical MAD poisoning/dilution, consistent cross-source timestomping, process DAG breaking (LOLBin reparenting), AST-Sigma/YARA evasion, uncaptured evidence classes, monotonic clock rollbacks/NTP poisoning, and novel anti-forensics.
+- **Group B (Integrity Guarantee Bypass)**: TOCTOU copy-race inversions, Ring-0 kernel rootkits, Direct Memory Access (DMA), NTFS Alternate Data Streams (ADS), Merkle tree ambiguity (RFC 6962 leaf/branch domain separation), non-canonical JSON serialization malleability (RFC 8785), encryption malleability, and IPFS unpinning.
+- **Group C (Trust Model Bypass)**: Investigator private key theft (Multi-sig Security Council on-chain revocation), off-chain root computation spoofing (2-phase ingestion commitment), L2 sequencer centralization/censorship, smart contract vulnerabilities, and rogue examiner tampering.
+
+👉 **Read the complete mathematical proofs and mitigation matrix**: [docs/adversarial_defense_matrix.md](docs/adversarial_defense_matrix.md)  
+👉 **Automated red-team adversarial tests**: [`tests/test_adversarial_defenses.py`](tests/test_adversarial_defenses.py) (All 5/5 Passing)
 
 ## 🚀 Quick Start Guide
 

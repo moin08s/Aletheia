@@ -61,6 +61,7 @@ class AnomalyDetector:
         off_hours_start: int = 22,  # 10 PM
         off_hours_end: int = 6,     # 6 AM
     ):
+        self.raw_events = list(events)
         self.events = sorted(events, key=lambda e: e.timestamp_utc or "")
         self.window_minutes = window_minutes
         self.z_threshold = z_threshold
@@ -94,7 +95,7 @@ class AnomalyDetector:
         window_sec = self.window_minutes * 60
         windows: Dict[int, List[Event]] = defaultdict(list)
 
-        for ev in self.events:
+        for ev in self.raw_events:
             dt = self._parse_ts(ev.timestamp_utc)
             if not dt:
                 continue
@@ -282,5 +283,119 @@ class AnomalyDetector:
                 i = j  # advance past this cluster
             else:
                 i += 1
+
+        return findings
+
+
+    def detect_statistical_dilution(self) -> List[AnomalyFinding]:
+        """
+        Adversarial Defense: Detects statistical poisoning / dilution attacks.
+        Flags when an attacker injects artificial uniform noise to inflate the
+        Median Absolute Deviation (MAD), thereby blinding standard Z-score outlier detection.
+        """
+        if len(self.events) < 50:
+            return []
+
+        timestamps = []
+        for ev in self.events:
+            dt = self._parse_ts(ev.timestamp_utc)
+            if dt:
+                timestamps.append(dt.timestamp())
+
+        if len(timestamps) < 50:
+            return []
+
+        deltas = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+        positive_deltas = [d for d in deltas if d >= 0]
+        if not positive_deltas:
+            return []
+
+        zero_delta_count = sum(1 for d in positive_deltas if d < 0.05)
+        zero_delta_ratio = zero_delta_count / len(positive_deltas)
+
+        # Flag if sub-50ms inter-arrival times constitute > 40% of sequential events
+        if zero_delta_ratio > 0.40 and len(self.events) >= 50:
+            return [
+                AnomalyFinding(
+                    anomaly_id="ANOM-DILUTION-001",
+                    anomaly_type="STATISTICAL_DILUTION_ATTACK",
+                    severity="CRITICAL",
+                    title="Adversarial Statistical Dilution Attack Detected",
+                    description=(
+                        f"Detected synthetic cluster of {zero_delta_count} sub-50ms events ({zero_delta_ratio*100:.1f}% of total). "
+                        "Pattern indicates automated log flooding / synthetic event injection designed to inflate "
+                        "the Median Absolute Deviation (MAD) and blind outlier detection."
+                    ),
+                    window_start_utc=self.events[0].timestamp_utc or "",
+                    window_end_utc=self.events[-1].timestamp_utc or "",
+                    metric_value=zero_delta_ratio * 100.0,
+                    baseline_value=5.0,
+                    z_score=9.99,
+                    affected_users=list({e.user for e in self.events if e.user}),
+                    sample_events=[e.event_id for e in self.events[:5]],
+                )
+            ]
+        return []
+
+    def detect_clock_manipulation(self) -> List[AnomalyFinding]:
+        """
+        Adversarial Defense: Detects system clock tampering and non-monotonic time anomalies.
+        Flags when logs jump backward in time or when Event ID 4616 ('System time changed') is present.
+        """
+        findings = []
+        host_clocks: Dict[str, float] = {}
+        for ev in self.raw_events:
+            dt = self._parse_ts(ev.timestamp_utc)
+            if not dt:
+                continue
+            ts = dt.timestamp()
+            host = ev.host or "DEFAULT_HOST"
+            if host in host_clocks:
+                prev_ts = host_clocks[host]
+                # If clock jumps backward by more than 5.0 seconds on the same host:
+                if (prev_ts - ts) > 5.0:
+                    findings.append(
+                        AnomalyFinding(
+                            anomaly_id=f"ANOM-CLOCK-JUMP-{ev.event_id}",
+                            anomaly_type="CLOCK_MANIPULATION_DETECTED",
+                            severity="CRITICAL",
+                            title="Non-Monotonic Backward Clock Jump Detected",
+                            description=(
+                                f"Host '{host}' timestamp jumped backward by {prev_ts - ts:.1f} seconds. "
+                                "Indicates potential NTP poisoning, manual system clock rollback, or timestomp anti-forensics."
+                            ),
+                            window_start_utc=ev.timestamp_utc or "",
+                            window_end_utc=ev.timestamp_utc or "",
+                            metric_value=prev_ts - ts,
+                            baseline_value=0.0,
+                            z_score=10.0,
+                            affected_users=[ev.user] if ev.user else [],
+                            sample_events=[ev.event_id],
+                        )
+                    )
+                    break
+            host_clocks[host] = ts
+
+        for ev in self.events:
+            raw = getattr(ev, "raw", {}) or {}
+            event_id = str(raw.get("EventID") or raw.get("event_id") or "")
+            if event_id == "4616" or "system time was changed" in (ev.rationale or "").lower():
+                findings.append(
+                    AnomalyFinding(
+                        anomaly_id=f"ANOM-CLOCK-EVTX-{ev.event_id}",
+                        anomaly_type="CLOCK_ALTERATION_EVENT_4616",
+                        severity="CRITICAL",
+                        title="Audit Log Event 4616: System Time Was Changed",
+                        description=f"System clock alteration logged by OS auditing service on host {ev.host}.",
+                        window_start_utc=ev.timestamp_utc or "",
+                        window_end_utc=ev.timestamp_utc or "",
+                        metric_value=1.0,
+                        baseline_value=0.0,
+                        z_score=10.0,
+                        affected_users=[ev.user] if ev.user else [],
+                        sample_events=[ev.event_id],
+                    )
+                )
+                break
 
         return findings

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 import hashlib
-from typing import List, Sequence
+import json
+from typing import Any, List, Sequence
 
 
 class MerkleTree:
@@ -19,6 +20,19 @@ class MerkleTree:
 
     LEAF_PREFIX = b"\x00"
     NODE_PREFIX = b"\x01"
+
+    @staticmethod
+    def canonical_serialize(obj: Any) -> bytes:
+        """
+        RFC 8785 JSON Canonicalization Scheme (JCS).
+        Ensures byte-for-byte identical serialization across Windows, Linux, and macOS.
+        """
+        return json.dumps(
+            obj,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
 
     @classmethod
     def compute_root(cls, leaf_hashes: Sequence[str]) -> str:
