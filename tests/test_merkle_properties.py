@@ -4,11 +4,15 @@ Mathematically verifies core cryptographic properties across randomized adversar
 1. Determinism: Identical leaves produce identical roots.
 2. Single-Bit Mutation Sensitivity: Mutating any leaf invalidates the root.
 3. RFC 6962 Domain Separation: Leaf prefixes (0x00) and branch prefixes (0x01) never collide.
+4. Edge Cases: Empty tree, duplicate leaves, single-leaf domain trees.
+5. Float Stability: Non-parametric MAD / Z-score statistics produce deterministic results.
 """
 
 import hashlib
 import random
 from chronotrace.integrity.merkle import MerkleTree
+from chronotrace.analysis.anomalies import AnomalyDetector
+from chronotrace.core.models import Event, EventEvidence, EventObject, EventSource
 
 
 def _random_sha256() -> str:
@@ -53,3 +57,44 @@ def test_rfc6962_domain_separation_invariants():
     node_hash = hashlib.sha256(MerkleTree.NODE_PREFIX + test_data).hexdigest()
 
     assert leaf_hash != node_hash
+
+
+def test_merkle_empty_tree_and_edge_cases():
+    """Edge Case: Empty tree returns 64 zeroes, single leaf computes correct RFC 6962 domain leaf."""
+    empty_root = MerkleTree.compute_root([])
+    assert empty_root == "0" * 64
+
+    single_leaf = _random_sha256()
+    expected_leaf_hash = hashlib.sha256(MerkleTree.LEAF_PREFIX + bytes.fromhex(single_leaf)).digest().hex()
+    actual_root = MerkleTree.compute_root([single_leaf])
+    assert actual_root == expected_leaf_hash
+
+    # Duplicate leaves must not crash or trigger division by zero
+    duplicates = [single_leaf] * 8
+    dup_root = MerkleTree.compute_root(duplicates)
+    assert len(dup_root) == 64
+
+
+def test_float_determinism_mad_computation():
+    """Property: Statistical anomaly detector Z-score calculations are byte-for-byte identical across runs."""
+    mock_events = [
+        Event(
+            event_id=f"ev-{i}",
+            timestamp_utc=f"2024-03-11T02:{i:02d}:00+00:00",
+            action="FILE_WRITE",
+            user="attacker",
+            host="WS-01",
+            object=EventObject(path=f"C:\\file_{i}.txt"),
+            source=EventSource(artifact="TEST", plugin="test", evidence_id="EV-1"),
+            evidence=EventEvidence(evidence_id="EV-1", sha256="0" * 64),
+        )
+        for i in range(20)
+    ]
+
+    detector1 = AnomalyDetector(mock_events)
+    detector2 = AnomalyDetector(mock_events)
+
+    findings1 = [f.to_dict() for f in detector1.detect_all()]
+    findings2 = [f.to_dict() for f in detector2.detect_all()]
+
+    assert findings1 == findings2

@@ -1,17 +1,23 @@
-# WASP (Wide-scope Artifact & Super-timeline Platform) Dependencies
-# Python >= 3.11
+# Aletheia DeDFIR Platform Dependencies
+# Python >= 3.11, < 3.14
 
 # Core Forensic Framework & Data Processing
-jinja2>=3.1.2
-pyarrow>=14.0.0
-pydantic>=2.5.0
-rich>=13.0.0
-tomli-w>=1.0.0
-typer>=0.9.0
-yara-python>=4.3.0
+pydantic==2.13.4
+pyarrow==25.0.1
+jinja2==3.1.6
+tomli-w==1.2.0
+typer==0.15.2
+rich==13.9.4
+pyyaml==6.0.3
 
-# Threat Intelligence & Sigma YAML Parsing
-pyyaml>=6.0.1
+# Web API, Console Backend & Ingestion
+fastapi==0.141.1
+uvicorn==0.52.1
+python-multipart>=0.0.9
+httpx>=0.27.0
 
-# Testing & Verification
-pytest>=7.4.0
+# Threat & Signature Engines (Optional Native Binding)
+yara-python>=4.3.0; sys_platform != "win32" or python_version < "3.13"
+
+# Testing, Verification & Fuzzing
+pytest==9.1.1

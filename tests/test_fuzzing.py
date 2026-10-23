@@ -54,3 +54,22 @@ def test_evtx_jsonl_parser_fuzzing_robustness(tmp_path: Path):
     case.acquire(fuzz_evtx, output_filename="fuzzed_Security.jsonl", evidence_id="EV-FUZZ-02")
     events = case.extract(profile="all")
     assert isinstance(events, list)
+
+
+def test_parser_fail_closed_robustness(tmp_path: Path):
+    """Verify that corrupt lines are discarded gracefully without crashing the pipeline."""
+    case_dir = tmp_path / "CASE-FAIL-CLOSED"
+    case = Case.create(case_id="CASE-FAIL-CLOSED", out_dir=case_dir)
+
+    content = (
+        '{"TimeCreated": "2024-03-11T02:14:07Z", "EventID": 4624, "TargetUserName": "alice"}\n'
+        '{MALFORMED_LINE}\n'
+        'CORRUPT_NON_JSON\n'
+    )
+    ev_file = tmp_path / "mixed_Security.jsonl"
+    ev_file.write_text(content, encoding="utf-8")
+    case.acquire(ev_file, output_filename="mixed_Security.jsonl", evidence_id="EV-FC-01")
+
+    events = case.extract(profile="all")
+    assert isinstance(events, list)
+    assert len(events) >= 1

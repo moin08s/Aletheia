@@ -3,7 +3,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests Passing](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-51%20passed-brightgreen.svg)]()
 [![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)-cyan.svg)]()
 [![Ethereum L2](https://img.shields.io/badge/Base%20Sepolia-L2%20Anchored-blue.svg)](https://sepolia.basescan.org/address/0x742d35Cc6634C0532925a3b844Bc454e4438f44e)
 [![EAS Attestation](https://img.shields.io/badge/EAS-Attestation%20Verified-purple.svg)](https://base-sepolia.easscan.org)
@@ -141,7 +141,7 @@ cd Aletheia
 python -m pip install -r requirements.txt
 ```
 
-### 3. Run the Automated Test Suite (48/48 Passing - Including Property & Fuzz Tests)
+### 3. Run the Automated Test Suite (51/51 Passing - Including Invariants & Parser Fuzzing)
 ```powershell
 python -m pytest
 ```
@@ -162,7 +162,12 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 ```powershell
 docker compose up --build
 ```
-Runs the containerized Aletheia FastAPI service and healthcheck at **http://localhost:8000**.
+Runs the containerized Aletheia FastAPI backend, React UI console, mock blockchain, and local IPFS cache at **http://localhost:8000**.
+
+> [!WARNING]
+> **Docker Scoping & Host Execution Mandate**:
+> Docker containerizes the web API, visual dashboard, and indexing engines.
+> **Kernel-level write-quarantine (`stat.S_IREAD` / `icacls`) and USB mass storage hotplug monitoring MUST be executed directly on the native host or bare-metal VM** to interact with low-level kernel block devices (`/dev`, `Win32_DiskDrive`, `IOKit`). See [`docs/degraded_mode_contract.md`](docs/degraded_mode_contract.md).
 
 
 ---
@@ -170,7 +175,10 @@ Runs the containerized Aletheia FastAPI service and healthcheck at **http://loca
 ## 🔗 Official Project Links
 
 * **Formal STRIDE Threat Model**: [`docs/threat_model.md`](docs/threat_model.md)
-* **Daubert Standard Legal Brief**: [`docs/daubert_evidentiary_brief.md`](docs/daubert_evidentiary_brief.md)
+* **Daubert Evidentiary Presentation Guide**: [`docs/court_presentation_guide.md`](docs/court_presentation_guide.md)
+* **Daubert Standard Legal Defense Brief**: [`docs/daubert_evidentiary_brief.md`](docs/daubert_evidentiary_brief.md)
+* **Key Management & Multi-Sig Custody**: [`docs/key_management.md`](docs/key_management.md)
+* **Degraded & Offline Mode Operational Contract**: [`docs/degraded_mode_contract.md`](docs/degraded_mode_contract.md)
 * **Security & Vulnerability Disclosure**: [`SECURITY.md`](SECURITY.md)
 * **Contribution Guidelines (Zero-LLM Mandate)**: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 * **Code of Conduct**: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
