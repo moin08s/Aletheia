@@ -21,6 +21,40 @@ class EVMAttestationClient:
     DEFAULT_CONTRACT = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
     DEFAULT_INVESTIGATOR = "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7"
 
+    # Production & Testnet Multi-Chain Registry Profiles
+    SUPPORTED_NETWORKS = {
+        "Base Sepolia (L2)": {
+            "chain_id": 84532,
+            "default_contract": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+            "explorer_url": "https://sepolia.basescan.org",
+            "is_testnet": True,
+        },
+        "Base Mainnet (L2)": {
+            "chain_id": 8453,
+            "default_contract": "0x5A4a19b88C15e44a697bA082b4D1Eb49622d1487",
+            "explorer_url": "https://basescan.org",
+            "is_testnet": False,
+        },
+        "Ethereum Mainnet": {
+            "chain_id": 1,
+            "default_contract": "0x3D7e1329c29d10B134015D56E8193a0279B48731",
+            "explorer_url": "https://etherscan.io",
+            "is_testnet": False,
+        },
+        "Arbitrum One": {
+            "chain_id": 42161,
+            "default_contract": "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
+            "explorer_url": "https://arbiscan.io",
+            "is_testnet": False,
+        },
+        "Optimism Mainnet": {
+            "chain_id": 10,
+            "default_contract": "0x6E4C60DFe24D855E5DbbCd4944d596489426f87E",
+            "explorer_url": "https://optimistic.etherscan.io",
+            "is_testnet": False,
+        },
+    }
+
     def __init__(
         self,
         rpc_url: Optional[str] = None,

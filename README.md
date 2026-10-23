@@ -3,7 +3,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests Passing](https://img.shields.io/badge/tests-40%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)]()
 [![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)-cyan.svg)]()
 [![Ethereum L2](https://img.shields.io/badge/Base%20Sepolia-L2%20Anchored-blue.svg)](https://sepolia.basescan.org/address/0x742d35Cc6634C0532925a3b844Bc454e4438f44e)
 [![EAS Attestation](https://img.shields.io/badge/EAS-Attestation%20Verified-purple.svg)](https://base-sepolia.easscan.org)
@@ -141,7 +141,7 @@ cd Aletheia
 python -m pip install -r requirements.txt
 ```
 
-### 3. Run the Automated Test Suite (40/40 Passing)
+### 3. Run the Automated Test Suite (48/48 Passing - Including Property & Fuzz Tests)
 ```powershell
 python -m pytest
 ```
@@ -158,10 +158,22 @@ npm run dev
 ```
 Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
+### 5. Alternative: Single-Command Docker Compose
+```powershell
+docker compose up --build
+```
+Runs the containerized Aletheia FastAPI service and healthcheck at **http://localhost:8000**.
+
+
 ---
 
 ## 🔗 Official Project Links
 
+* **Formal STRIDE Threat Model**: [`docs/threat_model.md`](docs/threat_model.md)
+* **Daubert Standard Legal Brief**: [`docs/daubert_evidentiary_brief.md`](docs/daubert_evidentiary_brief.md)
+* **Security & Vulnerability Disclosure**: [`SECURITY.md`](SECURITY.md)
+* **Contribution Guidelines (Zero-LLM Mandate)**: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+* **Code of Conduct**: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 * **Source Code Repository**: [https://github.com/moin08s/Aletheia](https://github.com/moin08s/Aletheia)
 * **Live Interactive Demo**: [https://moin08s.github.io/Aletheia/](https://moin08s.github.io/Aletheia/)
 * **Smart Contract Source**: [`contracts/ChronoTraceRegistry.sol`](https://github.com/moin08s/Aletheia/blob/main/contracts/ChronoTraceRegistry.sol)
