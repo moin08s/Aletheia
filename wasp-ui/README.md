@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# 🏛️ Aletheia Console (Frontend Web Interface)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The official single-page web console for **Aletheia: The Incorruptible Witness on Ethereum**.
 
-Currently, two official plugins are available:
+Built with **React 19, TypeScript, and Vite**, connecting directly to the Aletheia FastAPI backend for real-time digital forensics, Web3 incident attestation, and on-chain tamper detection.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🌟 Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Super-Timeline & Breach Replay Scrubber**:
+   - Scrub through incidents with automated sequential playback.
+   - Live visual severity indicators on critical MITRE ATT&CK techniques.
+2. **Web3 Attestation & Decentralized Chain of Custody**:
+   - 1-Click anchoring to **Base Sepolia (L2)** and **IPFS / Filecoin**.
+   - Direct deep-links to **EASScan** and **BaseScan**.
+3. **1-Click On-Chain Tamper Verification**:
+   - Compares local disk files and Merkle roots against immutable on-chain smart contract state.
+   - Instantly raises a red alert if 1 byte of host evidence was modified.
+4. **Zero-Knowledge (ZK) Selective Disclosure Proof Generator**:
+   - Generates Groth16 / BN254 ZK-SNARK verification cards proving an exploit occurred without leaking private client IP addresses or employee PII.
 
-## Expanding the Oxlint configuration
+---
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 🛠️ Development & Build
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```powershell
+# Install dependencies
+npm install
+
+# Run local development server
+npm run dev
+
+# Compile production bundle
+npm run build
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
