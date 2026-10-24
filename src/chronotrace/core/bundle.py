@@ -2,7 +2,7 @@
 
 Packages a forensic case workspace (evidence, custody ledger, index, derived artifacts,
 TSA tokens, and reports) into an immutable, deterministically hashed, cryptographically
-signed single-file '.wasp' bundle for courtroom submission and third-party audit.
+signed single-file '.wasp' or AES-256-GCM encrypted '.wasp.enc' bundle for courtroom submission.
 """
 
 from __future__ import annotations
@@ -12,11 +12,19 @@ import io
 import json
 import os
 import tarfile
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from chronotrace.integrity.merkle import MerkleTree
+
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    HAS_AESGCM = True
+except ImportError:
+    AESGCM = None
+    HAS_AESGCM = False
 
 
 @dataclass
@@ -28,6 +36,7 @@ class BundleVerificationResult:
     files_checked: int
     signature_present: bool
     signature_valid: Optional[bool]
+    is_encrypted: bool = False
     errors: List[str] = field(default_factory=list)
     manifest_data: Dict[str, Any] = field(default_factory=dict)
 
@@ -39,15 +48,18 @@ class BundleVerificationResult:
             "files_checked": self.files_checked,
             "signature_present": self.signature_present,
             "signature_valid": self.signature_valid,
+            "is_encrypted": self.is_encrypted,
             "errors": self.errors,
             "manifest_data": self.manifest_data,
         }
 
 
 class CaseBundleManager:
-    """Manages creation, signing, verification, and extraction of .wasp bundles."""
+    """Manages creation, signing, encryption, verification, and extraction of .wasp bundles."""
 
     MANIFEST_FILENAME = "bundle_manifest.json"
+    ENC_MAGIC = b"WASPENC1"
+    PBKDF2_ROUNDS = 100_000
 
     @staticmethod
     def _compute_key(secret_key: Optional[bytes] = None, passphrase: Optional[str] = None) -> Optional[bytes]:
@@ -58,14 +70,65 @@ class CaseBundleManager:
         return None
 
     @classmethod
+    def _derive_aes_key(cls, passphrase: str, salt: bytes) -> bytes:
+        return hashlib.pbkdf2_hmac("sha256", passphrase.encode("utf-8"), salt, cls.PBKDF2_ROUNDS, 32)
+
+    @classmethod
+    def encrypt_file(cls, input_path: Path, output_path: Path, passphrase: str) -> Path:
+        """Encrypts an archive file using AES-256-GCM with PBKDF2 key derivation."""
+        if not HAS_AESGCM or AESGCM is None:
+            raise RuntimeError("cryptography package is required for AES-256-GCM encryption")
+
+        salt = os.urandom(16)
+        nonce = os.urandom(12)
+        key = cls._derive_aes_key(passphrase, salt)
+        aesgcm = AESGCM(key)
+
+        data = input_path.read_bytes()
+        aad = cls.ENC_MAGIC + salt + nonce
+        ciphertext = aesgcm.encrypt(nonce, data, aad)
+
+        with open(output_path, "wb") as f:
+            f.write(aad + ciphertext)
+
+        return output_path
+
+    @classmethod
+    def decrypt_file(cls, input_path: Path, output_path: Path, passphrase: str) -> Path:
+        """Decrypts a WASPENC1 archive using AES-256-GCM and verifies authentication tag."""
+        if not HAS_AESGCM or AESGCM is None:
+            raise RuntimeError("cryptography package is required for AES-256-GCM decryption")
+
+        raw = input_path.read_bytes()
+        magic_len = len(cls.ENC_MAGIC)
+        if len(raw) < magic_len + 16 + 12 + 16 or not raw.startswith(cls.ENC_MAGIC):
+            raise ValueError("File is not a valid WASP encrypted container (missing or invalid magic header)")
+
+        salt = raw[magic_len : magic_len + 16]
+        nonce = raw[magic_len + 16 : magic_len + 28]
+        ciphertext = raw[magic_len + 28 :]
+        aad = cls.ENC_MAGIC + salt + nonce
+
+        key = cls._derive_aes_key(passphrase, salt)
+        aesgcm = AESGCM(key)
+        try:
+            plaintext = aesgcm.decrypt(nonce, ciphertext, aad)
+        except Exception as e:
+            raise ValueError("Decryption failed: invalid passphrase or tampered ciphertext (AES-GCM authentication failed)") from e
+
+        output_path.write_bytes(plaintext)
+        return output_path
+
+    @classmethod
     def export_bundle(
         cls,
         case_dir: str | Path,
         output_file: Optional[str | Path] = None,
         secret_key: Optional[bytes] = None,
         passphrase: Optional[str] = None,
+        encrypt: bool = False,
     ) -> Path:
-        """Package a case into an immutable, cryptographically signed .wasp bundle."""
+        """Package a case into an immutable, cryptographically signed, and optionally encrypted .wasp bundle."""
         case_root = Path(case_dir).resolve()
         case_json = case_root / "case.json"
         if not case_json.exists():
@@ -76,8 +139,9 @@ class CaseBundleManager:
 
         case_id = case_data.get("case_id", "CASE-UNKNOWN")
 
+        ext = ".wasp.enc" if encrypt else ".wasp"
         if output_file is None:
-            output_path = case_root.parent / f"{case_id}.wasp"
+            output_path = case_root.parent / f"{case_id}{ext}"
         else:
             output_path = Path(output_file).resolve()
 
@@ -88,7 +152,6 @@ class CaseBundleManager:
         all_files: List[Path] = []
 
         for root, dirs, files in os.walk(case_root):
-            # Ignore transient cache directories
             dirs[:] = [d for d in dirs if d not in ("__pycache__", ".git", ".pytest_cache")]
             for file in sorted(files):
                 if file.endswith((".pyc", ".tmp")) or file == output_path.name:
@@ -137,8 +200,13 @@ class CaseBundleManager:
         manifest_bytes = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
 
         # 6. Assemble deterministic tar.gz archive
-        with tarfile.open(output_path, "w:gz") as tar:
-            # Add manifest first
+        target_tar = output_path
+        temp_tar = None
+        if encrypt:
+            temp_tar = Path(tempfile.mktemp(suffix=".tar.gz"))
+            target_tar = temp_tar
+
+        with tarfile.open(target_tar, "w:gz") as tar:
             ti_manifest = tarfile.TarInfo(name=cls.MANIFEST_FILENAME)
             ti_manifest.size = len(manifest_bytes)
             ti_manifest.mtime = 0
@@ -148,7 +216,6 @@ class CaseBundleManager:
             ti_manifest.gname = ""
             tar.addfile(ti_manifest, io.BytesIO(manifest_bytes))
 
-            # Add all case files
             for file_path in all_files:
                 rel_path = str(file_path.relative_to(case_root)).replace("\\", "/")
                 archive_name = f"case/{rel_path}"
@@ -161,6 +228,16 @@ class CaseBundleManager:
                 ti.gname = ""
                 with open(file_path, "rb") as f:
                     tar.addfile(ti, f)
+
+        # 7. Apply AES-256-GCM encryption if requested
+        if encrypt:
+            if not passphrase:
+                if temp_tar and temp_tar.exists():
+                    temp_tar.unlink()
+                raise ValueError("A passphrase is required to encrypt the .wasp container")
+            cls.encrypt_file(temp_tar, output_path, passphrase)
+            if temp_tar.exists():
+                temp_tar.unlink()
 
         return output_path
 
@@ -184,13 +261,48 @@ class CaseBundleManager:
                 errors=[f"Bundle file not found: {bundle_file}"],
             )
 
+        # Check for AES-256-GCM encryption
+        with open(bundle_file, "rb") as f:
+            header = f.read(len(cls.ENC_MAGIC))
+
+        is_encrypted = header == cls.ENC_MAGIC
+        temp_decrypted = None
+        verify_target = bundle_file
+
+        if is_encrypted:
+            if not passphrase:
+                return BundleVerificationResult(
+                    is_valid=False,
+                    case_id="",
+                    merkle_root="",
+                    files_checked=0,
+                    signature_present=False,
+                    signature_valid=False,
+                    is_encrypted=True,
+                    errors=["Bundle is encrypted with AES-256-GCM; a valid passphrase is required for verification."],
+                )
+            try:
+                temp_decrypted = Path(tempfile.mktemp(suffix=".tar.gz"))
+                cls.decrypt_file(bundle_file, temp_decrypted, passphrase)
+                verify_target = temp_decrypted
+            except Exception as e:
+                return BundleVerificationResult(
+                    is_valid=False,
+                    case_id="",
+                    merkle_root="",
+                    files_checked=0,
+                    signature_present=False,
+                    signature_valid=False,
+                    is_encrypted=True,
+                    errors=[f"Encrypted container verification failed: {e}"],
+                )
+
         errors: List[str] = []
         files_checked = 0
         computed_leaves: List[str] = []
 
         try:
-            with tarfile.open(bundle_file, "r:gz") as tar:
-                # 1. Extract manifest
+            with tarfile.open(verify_target, "r:gz") as tar:
                 try:
                     manifest_ti = tar.getmember(cls.MANIFEST_FILENAME)
                     manifest_f = tar.extractfile(manifest_ti)
@@ -205,6 +317,7 @@ class CaseBundleManager:
                         files_checked=0,
                         signature_present=False,
                         signature_valid=False,
+                        is_encrypted=is_encrypted,
                         errors=[f"Failed to read {cls.MANIFEST_FILENAME}: {exc}"],
                     )
 
@@ -212,7 +325,6 @@ class CaseBundleManager:
                 expected_merkle = manifest.get("merkle_root", "")
                 manifest_sig = manifest.get("signature")
 
-                # 2. Check each file in manifest against tar contents
                 for rel_path, meta in expected_files.items():
                     archive_name = f"case/{rel_path}"
                     try:
@@ -238,12 +350,10 @@ class CaseBundleManager:
                             f"Hash mismatch on {rel_path}: expected {meta.get('sha256')}, got {computed_hash}"
                         )
 
-                # 3. Verify Merkle root
                 computed_root = MerkleTree.compute_root(computed_leaves) if computed_leaves else "0" * 64
                 if computed_root != expected_merkle:
                     errors.append(f"Merkle root mismatch: expected {expected_merkle}, computed {computed_root}")
 
-                # 4. Verify signature if present and key provided
                 signature_present = bool(manifest_sig)
                 signature_valid = None
 
@@ -256,7 +366,7 @@ class CaseBundleManager:
                         signature_valid = False
                         errors.append("Cryptographic HMAC signature validation failed!")
                 elif signature_present and not key:
-                    signature_valid = None  # Key not provided to verify
+                    signature_valid = None
 
                 is_valid = len(errors) == 0 and (signature_valid is not False)
 
@@ -267,6 +377,7 @@ class CaseBundleManager:
                     files_checked=files_checked,
                     signature_present=signature_present,
                     signature_valid=signature_valid,
+                    is_encrypted=is_encrypted,
                     errors=errors,
                     manifest_data=manifest,
                 )
@@ -279,8 +390,12 @@ class CaseBundleManager:
                 files_checked=files_checked,
                 signature_present=False,
                 signature_valid=False,
+                is_encrypted=is_encrypted,
                 errors=[f"Corrupted or invalid archive: {exc}"],
             )
+        finally:
+            if temp_decrypted and temp_decrypted.exists():
+                temp_decrypted.unlink()
 
     @classmethod
     def extract_bundle(
@@ -291,7 +406,7 @@ class CaseBundleManager:
         secret_key: Optional[bytes] = None,
         passphrase: Optional[str] = None,
     ) -> Path:
-        """Safely extract all files from a .wasp container into target_dir."""
+        """Safely extract all files from a .wasp or .wasp.enc container into target_dir."""
         bundle_file = Path(bundle_path).resolve()
         target_path = Path(target_dir).resolve()
 
@@ -302,16 +417,32 @@ class CaseBundleManager:
 
         target_path.mkdir(parents=True, exist_ok=True)
 
-        with tarfile.open(bundle_file, "r:gz") as tar:
-            for member in tar.getmembers():
-                if member.name.startswith("case/"):
-                    sub_path = member.name[len("case/"):]
-                    dest = target_path / sub_path
-                    dest.parent.mkdir(parents=True, exist_ok=True)
-                    if member.isfile():
-                        src = tar.extractfile(member)
-                        if src:
-                            with open(dest, "wb") as out:
-                                out.write(src.read())
+        with open(bundle_file, "rb") as f:
+            header = f.read(len(cls.ENC_MAGIC))
+
+        is_encrypted = header == cls.ENC_MAGIC
+        temp_decrypted = None
+        extract_source = bundle_file
+
+        if is_encrypted:
+            temp_decrypted = Path(tempfile.mktemp(suffix=".tar.gz"))
+            cls.decrypt_file(bundle_file, temp_decrypted, passphrase or "")
+            extract_source = temp_decrypted
+
+        try:
+            with tarfile.open(extract_source, "r:gz") as tar:
+                for member in tar.getmembers():
+                    if member.name.startswith("case/"):
+                        sub_path = member.name[len("case/"):]
+                        dest = target_path / sub_path
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        if member.isfile():
+                            src = tar.extractfile(member)
+                            if src:
+                                with open(dest, "wb") as out:
+                                    out.write(src.read())
+        finally:
+            if temp_decrypted and temp_decrypted.exists():
+                temp_decrypted.unlink()
 
         return target_path

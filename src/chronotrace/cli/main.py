@@ -430,28 +430,32 @@ def plugin_list():
 def bundle_export(
     case_dir: Path = typer.Option(..., "--case", help="Path to target case directory"),
     output: Optional[Path] = typer.Option(None, "--out", help="Output .wasp bundle container path"),
-    passphrase: Optional[str] = typer.Option(None, "--passphrase", help="Secret passphrase to HMAC-SHA256 sign bundle"),
+    passphrase: Optional[str] = typer.Option(None, "--passphrase", "-p", help="Secret passphrase for HMAC signing or AES-256-GCM encryption"),
+    encrypt: bool = typer.Option(False, "--encrypt", "-e", help="Encrypt bundle using authenticated AES-256-GCM"),
 ):
-    """Package case workspace into an immutable, cryptographically signed .wasp container."""
+    """Package case workspace into an immutable, cryptographically signed, and optionally encrypted .wasp container."""
     from chronotrace.core.bundle import CaseBundleManager
     case = Case.open(case_dir)
-    console.print(f"[bold cyan]Packaging case {case.case_id} into deterministic .wasp container...[/bold cyan]")
-    bundle_path = CaseBundleManager.export_bundle(case_dir, output_file=output, passphrase=passphrase)
+    enc_desc = " (AES-256-GCM Encrypted)" if encrypt else ""
+    console.print(f"[bold cyan]Packaging case {case.case_id} into deterministic .wasp container{enc_desc}...[/bold cyan]")
+    bundle_path = CaseBundleManager.export_bundle(case_dir, output_file=output, passphrase=passphrase, encrypt=encrypt)
     console.print(f"[bold green][+][/bold green] Bundle created successfully: [bold yellow]{bundle_path}[/bold yellow]")
+    if encrypt:
+        console.print("[bold green]  [+] AES-256-GCM Authenticated Encryption: Active (PBKDF2-HMAC-SHA256, 100k rounds)[/bold green]")
     if passphrase:
         console.print("[bold green]  [+] HMAC-SHA256 Cryptographic Signature: Sealed[/bold green]")
-    else:
+    elif not encrypt:
         console.print("[dim]  [!] Bundle created without HMAC signature (Merkle root integrity active)[/dim]")
 
 
 @bundle_app.command("verify")
 def bundle_verify(
-    bundle_path: Path = typer.Argument(..., help="Path to .wasp bundle container file"),
-    passphrase: Optional[str] = typer.Option(None, "--passphrase", help="Passphrase to verify HMAC signature"),
+    bundle_path: Path = typer.Argument(..., help="Path to .wasp or .wasp.enc container file"),
+    passphrase: Optional[str] = typer.Option(None, "--passphrase", "-p", help="Passphrase for AES decryption or HMAC verification"),
 ):
     """Verify cryptographic integrity, Merkle tree root, and signature of a .wasp container."""
     from chronotrace.core.bundle import CaseBundleManager
-    console.print(f"[bold cyan]Verifying .wasp bundle container:[/bold cyan] {bundle_path.name}")
+    console.print(f"[bold cyan]Verifying bundle container:[/bold cyan] {bundle_path.name}")
     res = CaseBundleManager.verify_bundle(bundle_path, passphrase=passphrase)
 
     if res.is_valid:
@@ -459,6 +463,8 @@ def bundle_verify(
         console.print(f"  Case ID:       [bold cyan]{res.case_id}[/bold cyan]")
         console.print(f"  Files Checked: [green]{res.files_checked}[/green]")
         console.print(f"  Merkle Root:   [yellow]{res.merkle_root}[/yellow]")
+        if res.is_encrypted:
+            console.print("  Encryption:    [bold green]AES-256-GCM Authenticated Tag Verified[/bold green]")
         if res.signature_present:
             sig_status = "[bold green]VALID (MATCH)[/bold green]" if res.signature_valid else "[yellow]UNVERIFIED (Passphrase not provided)[/yellow]"
             console.print(f"  Signature:     {sig_status}")
@@ -467,6 +473,19 @@ def bundle_verify(
         for err in res.errors:
             console.print(f"  [red]* {err}[/red]")
         raise typer.Exit(code=1)
+
+
+@bundle_app.command("extract")
+def bundle_extract(
+    bundle_path: Path = typer.Argument(..., help="Path to .wasp or .wasp.enc container file"),
+    target_dir: Path = typer.Option(..., "--out", "-o", help="Target extraction directory"),
+    passphrase: Optional[str] = typer.Option(None, "--passphrase", "-p", help="Passphrase for AES decryption or HMAC verification"),
+):
+    """Safely verify and extract all files from a .wasp or .wasp.enc bundle into target directory."""
+    from chronotrace.core.bundle import CaseBundleManager
+    console.print(f"[bold cyan]Extracting bundle container:[/bold cyan] {bundle_path.name} -> {target_dir}")
+    extracted = CaseBundleManager.extract_bundle(bundle_path, target_dir, verify_first=True, passphrase=passphrase)
+    console.print(f"[bold green][+] Successfully extracted verified case workspace to:[/bold green] {extracted}")
 
 
 # --- PROCESS LINEAGE COMMAND ---

@@ -3,7 +3,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests Passing](https://img.shields.io/badge/tests-60%20passed-brightgreen.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-64%20passed-brightgreen.svg)]()
 [![Adversarial Defense](https://img.shields.io/badge/Adversarial%20Defense-20%20Attack%20Classes%20Evaluated-blue.svg)](docs/adversarial_defense_matrix.md)
 [![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)%20Support-cyan.svg)]()
 [![Ethereum L2](https://img.shields.io/badge/Base%20Sepolia-L2%20Anchored-blue.svg)](https://sepolia.basescan.org/address/0x742d35Cc6634C0532925a3b844Bc454e4438f44e)
@@ -158,7 +158,7 @@ cd Aletheia
 python -m pip install -r requirements.txt
 ```
 
-### 3. Run the Automated Test Suite (60/60 Passing - 100% Green: Invariants, Adversarial & Parser Fuzzing)
+### 3. Run the Automated Test Suite (64/64 Passing - 100% Green: Benchmarks, Adversarial & Invariants)
 ```powershell
 python -m pytest
 ```

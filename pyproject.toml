@@ -1,13 +1,14 @@
 [project]
-name = "wasp"
-version = "1.4.0"
-description = "WASP: Automated digital forensics tool for metadata extraction, artefact parsing, timeline reconstruction, SHA-256 integrity, and reporting."
+name = "aletheia"
+version = "1.5.0"
+description = "Aletheia: The Incorruptible Witness on Ethereum - Decentralized Digital Forensics & Incident Response (DeDFIR) platform."
 readme = "README.md"
 authors = [
-    { name = "WASP Forensics Contributors" }
+    { name = "Aletheia DeDFIR Contributors" }
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "cryptography>=50.0.0",
     "jinja2>=3.1.6",
     "pyarrow>=25.0.1",
     "pydantic>=2.13.5",
@@ -23,6 +24,7 @@ test = [
 ]
 
 [project.scripts]
+aletheia = "chronotrace.cli.main:app"
 wasp = "chronotrace.cli.main:app"
 chronotrace = "chronotrace.cli.main:app"
 
@@ -32,4 +34,3 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-

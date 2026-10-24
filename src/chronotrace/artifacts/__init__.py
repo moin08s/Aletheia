@@ -8,6 +8,7 @@ from chronotrace.artifacts.registry import RegistryPlugin
 from chronotrace.artifacts.browser import BrowserPlugin
 from chronotrace.artifacts.lnk import LnkPlugin
 from chronotrace.artifacts.logs import LogsPlugin
+from chronotrace.artifacts.network import NetworkLogPlugin
 
 __all__ = [
     "FileMetadataPlugin",
@@ -18,4 +19,5 @@ __all__ = [
     "BrowserPlugin",
     "LnkPlugin",
     "LogsPlugin",
+    "NetworkLogPlugin",
 ]
