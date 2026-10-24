@@ -17,7 +17,10 @@ contract AletheiaRegistry is ChronoTraceRegistry {
     string public constant PLATFORM_NAME = "Aletheia DeDFIR";
     string public constant SPECIFICATION = "FRE-902(14)-RFC6962";
 
-    // 3-of-5 Multi-Sig Security Council / Governance
+    // Security Council Governance:
+    // In prototype/testnet, initialized to msg.sender (deployer EOA).
+    // In production, must be transferred to a 3-of-5 Gnosis Safe Multi-Sig wallet
+    // via setSecurityCouncil() to prevent single-EOA administrative compromise.
     address public securityCouncil;
 
     // Revocation status mapping: address => isRevoked

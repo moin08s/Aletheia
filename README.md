@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests Passing](https://img.shields.io/badge/tests-64%20passed-brightgreen.svg)]()
 [![Adversarial Defense](https://img.shields.io/badge/Adversarial%20Defense-20%20Attack%20Classes%20Evaluated-blue.svg)](docs/adversarial_defense_matrix.md)
-[![Forensic Standards](https://img.shields.io/badge/standards-Daubert%20Standard%20%7C%20FRE%20902(14)%20Support-cyan.svg)]()
+[![Forensic Standards](https://img.shields.io/badge/standards-FRE%20902(14)%20Authentication%20Support-cyan.svg)]()
 [![Ethereum L2](https://img.shields.io/badge/Base%20Sepolia-L2%20Anchored-blue.svg)](https://sepolia.basescan.org/address/0x742d35Cc6634C0532925a3b844Bc454e4438f44e)
 [![EAS Attestation](https://img.shields.io/badge/EAS-Attestation%20Verified-purple.svg)](https://base-sepolia.easscan.org)
 [![Live Web Console Demo](https://img.shields.io/badge/Live%20Demo-Aletheia%20Console-blueviolet?style=for-the-badge&logo=googlechrome)](https://moin08s.github.io/Aletheia/)
@@ -25,12 +25,23 @@
 Over $2 Billion is lost annually to smart contract hacks and cyber exploits. When incidents occur, teams investigate on centralized servers where malicious insiders or attackers can alter logs and erase digital evidence, destroying legal admissibility in court.
 
 Aletheia solves this by bridging **operating system digital forensics** with **Ethereum Layer 2 rollups, decentralized storage, and EAS attestations**:
-1. **Kernel-Level Write Quarantine**: Revokes OS write permissions (`stat.S_IREAD`) upon ingestion, physically barring evidence alteration.
-2. **Deterministic Forensic Engine (Zero-AI / Zero-LLM)**: Designed to support legal authentication under the **Daubert Standard** and **Federal Rule of Evidence 902(14)** without probabilistic hallucinations. Employs non-parametric **Median Absolute Deviation (MAD)** burst statistics, AST-based **Sigma rules** mapped to MITRE ATT&CK, and **Process Lineage DAGs**.
+1. **Kernel-Level Write Quarantine**: Applies OS read-only locks (`stat.S_IREAD` / `icacls`) upon ingestion to enforce tamper-evidence under documented host trust assumptions.
+2. **Deterministic Forensic Engine (Zero-AI / Zero-LLM)**: Tamper-evident under documented trust assumptions; designed to support authentication under **Federal Rule of Evidence 902(14)** without probabilistic hallucinations. Employs non-parametric **Median Absolute Deviation (MAD)** burst statistics, AST-based **Sigma rules** mapped to MITRE ATT&CK, and **Process Lineage DAGs**.
 3. **RFC 6962 Domain-Separated Merkle Trees**: Computes collision-resistant Merkle roots (`0x00` leaf / `0x01` branch prefixes) over all timeline events.
 4. **Decentralized Storage & On-Chain Case Registry**: Archives encrypted evidence bundles on **IPFS/Filecoin** (`bafy...` CIDs) and anchors roots directly to the **`ChronoTraceRegistry.sol`** EVM smart contract on **Base Sepolia**.
 5. **Ethereum Attestation Service (EAS)**: Mints verifiable, signed expert witness declarations viewable on **EASScan**.
 6. **1-Click On-Chain Tamper Detection & Breach Scrubber**: An interactive React console featuring an automated incident replay player, a Zero-Knowledge (ZK) Selective Disclosure proof generator, and an on-chain tamper check.
+
+---
+
+## ⚠️ Residual Risk & Trust Assumptions
+
+Digital forensics and cryptographic attestations can only guarantee integrity within clear boundaries. In accordance with honest engineering and forensic transparency, Aletheia explicitly defines its operational boundaries and what the tool does **not** defend against:
+
+1. **Live Acquisition on Compromised Host (Ring-0 Rootkits)**: If an adversary already controls kernel space (`Ring-0`) prior to or during live triage, kernel syscalls and memory queries can be intercepted or spoofed before reaching user-space acquisition tools. Live memory triage cannot defend against active rootkits; dead-box disk imaging or hardware write-blockers are mandatory for high-threat scenarios.
+2. **Direct Memory Access (DMA) Attacks**: Hardware-level DMA bus mastering (e.g., PCIe, Thunderbolt) without an active IOMMU or physical hardware write-blocking bridge bypasses OS-level write restrictions.
+3. **Compromised Host Administrator / Insider Key Holder**: If an insider possesses root/administrator credentials and the case signing keys, they can mint valid attestations for altered artifacts prior to anchoring. Integrity guarantees rely on secure key custody (HSM/KMS), multi-signature governance, and immutable append-only logs.
+4. **Base Sepolia Testnet Anchoring (Prototype Status)**: The public deployment is anchored to Base Sepolia testnet for demonstration and benchmarking purposes. Testnets carry zero economic finality or legal longevity guarantees; production forensic standing requires anchoring to Ethereum Mainnet, Base Mainnet, or an enterprise L2 with documented retention SLAs.
 
 ---
 
@@ -65,7 +76,7 @@ flowchart TD
 
     subgraph InterfaceLayer ["5. Investigation & Court Admissibility"]
         BaseL2 & IPFS & EAS --> UI["Aletheia React 19 Console (Incident Replay + ZK Proof)"]
-        BaseL2 & IPFS & EAS --> Report["Daubert / FRE 902(14) Authentication-Ready Legal Report"]
+        BaseL2 & IPFS & EAS --> Report["Audit-Ready Forensic Report (FRE 902(14) Authentication Support)"]
     end
 ```
 

@@ -66,10 +66,15 @@ flowchart TD
 
 ---
 
-## 3. Residual Risk & Mitigation Strategy
+## 3. Residual Risk & Explicit Non-Goals
 
-| Residual Risk | Impact | Planned Hardening |
+Digital forensics and cryptographic attestations can only guarantee integrity within clear boundaries. In accordance with honest engineering and forensic transparency, Aletheia explicitly defines what the tool does **not** defend against:
+
+| Residual Risk / Boundary | Impact | Status & Operational Mitigation |
 |---|---|---|
+| **Live Acquisition on Compromised Host (Ring-0 Rootkits)** | Critical | If an attacker controls kernel mode (`Ring-0`) prior to or during live triage, kernel syscalls and memory queries can be intercepted or spoofed. Live acquisition cannot guarantee integrity against active rootkits; dead-box disk imaging or hardware write-blockers are mandatory for high-threat scenarios. |
+| **Direct Memory Access (DMA) Attacks** | High | Hardware-level DMA bus mastering (e.g. PCIe, Thunderbolt) without active IOMMU or physical hardware write-blocking bridge bypasses OS write-quarantine. Hardware write-blockers required. |
+| **Examiner Private Key Theft / Insider Admin** | High | In prototype/testnet, `securityCouncil` is initialized to the deployer EOA. In production, administrative authority must be transferred to a 3-of-5 Gnosis Safe multi-sig wallet, and examiner keys must reside in KMS/HSM hardware tokens. |
+| **Base Sepolia Testnet Longevity** | Medium | Testnet contracts carry zero economic finality or legal longevity guarantees. Anchoring on Base Sepolia is for research/demo benchmarking; court-admissible production deployments require Ethereum Mainnet or Base Mainnet. |
 | **EVM Chain Reorganization** | Medium | Wait for 64-block finality (Base L2 epoch) before considering attestation irreversible. |
-| **Examiner Private Key Theft** | High | Integrate Hardware Security Modules (HSM / AWS KMS / Ledger) and multi-signature approvals for court-grade case registration. |
 | **IPFS Node Unavailability** | Low | Implement multi-provider decentralized pinning (Filecoin, Arweave, and local IPFS clusters). |
